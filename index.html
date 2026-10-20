@@ -1,0 +1,2456 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="robots" content="noindex, nofollow, noarchive" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light" />
+<meta name="description" content="墨间 · 一段与自己的相处。单文件、离线可跑的水墨疗愈会话原型（8 步闭环，非医疗建议）。" />
+<title>墨间 · 一段与自己的相处</title>
+<style>
+  :root{
+    --paper:#f5f1e8;
+    --paper-2:#efe9dc;
+    --paper-3:#fbf8f1;
+    --ink:#221f1b;
+    --ink-2:#3a352e;
+    --ink-3:#6b6357;
+    --ink-4:#9a9184;
+    --cinnabar:#a8382a;
+    --cinnabar-soft:rgba(168,56,42,.55);
+    --line:rgba(34,31,27,.14);
+    --line-soft:rgba(34,31,27,.08);
+    --serif:"Noto Serif SC","Source Han Serif SC","Songti SC","STSong","SimSun","Times New Roman",serif;
+    --sans:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  [hidden]{display:none !important;}
+  html,body{max-width:100%;overflow-x:hidden;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0;
+    padding:0;
+    background:
+      radial-gradient(120% 70% at 82% -12%, rgba(34,31,27,.075), transparent 58%),
+      radial-gradient(90% 60% at -10% 24%, rgba(34,31,27,.045), transparent 60%),
+      linear-gradient(180deg,#f7f3ea 0%, var(--paper) 42%, #f2ecdf 100%);
+    color:var(--ink);
+    font-family:var(--serif);
+    font-size:16px;
+    line-height:1.85;
+    letter-spacing:.01em;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  /* 宣纸纤维：内联 SVG 噪点，无网络请求 */
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    z-index:0;
+    pointer-events:none;
+    opacity:.55;
+    mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23p)' opacity='0.2'/%3E%3C/svg%3E");
+    background-size:180px 180px;
+  }
+  body::after{
+    content:"";
+    position:fixed;
+    inset:0;
+    z-index:0;
+    pointer-events:none;
+    background:
+      radial-gradient(46% 30% at 88% 100%, rgba(34,31,27,.05), transparent 70%),
+      radial-gradient(40% 26% at 4% 92%, rgba(168,56,42,.035), transparent 72%);
+  }
+  #app{
+    position:relative;
+    z-index:1;
+    width:100%;
+    max-width:640px;
+    margin:0 auto;
+    padding:24px 20px 44px;
+  }
+
+  /* ---------- 页头 ---------- */
+  .site-head{width:100%;}
+  .brand{display:flex;align-items:center;gap:12px;min-width:0;}
+  .seal{
+    flex:0 0 auto;
+    width:38px;height:38px;
+    display:grid;place-items:center;
+    border:1px solid var(--cinnabar);
+    border-radius:2px;
+    color:var(--cinnabar);
+    background:rgba(168,56,42,.045);
+    font-size:17px;line-height:1;
+    letter-spacing:0;
+    box-shadow:0 0 0 3px rgba(168,56,42,.045);
+  }
+  .brand-text{min-width:0;}
+  .brand-title{
+    margin:0;
+    font-size:16px;
+    font-weight:600;
+    letter-spacing:.26em;
+    white-space:nowrap;
+  }
+  .brand-sub{
+    margin:4px 0 0;
+    font-family:var(--sans);
+    font-size:10.5px;
+    letter-spacing:.24em;
+    color:var(--ink-3);
+    white-space:nowrap;
+  }
+  .progress-meta{
+    display:flex;
+    flex-wrap:wrap;
+    gap:4px 14px;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-top:24px;
+    font-family:var(--sans);
+    font-size:11px;
+    letter-spacing:.16em;
+    color:var(--ink-3);
+  }
+  #step-name{color:var(--ink-2);}
+  #step-count{font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .progress-track{
+    position:relative;
+    height:1px;
+    margin-top:9px;
+    background:var(--line);
+  }
+  #progress-fill{
+    position:absolute;left:0;top:0;bottom:0;
+    width:12.5%;
+    background:linear-gradient(90deg, rgba(34,31,27,.5), rgba(34,31,27,.92));
+    transition:width .6s cubic-bezier(.22,.61,.36,1);
+  }
+  #progress-fill::after{
+    content:"";
+    position:absolute;right:-3px;top:-3px;
+    width:7px;height:7px;border-radius:50%;
+    background:var(--cinnabar);
+    box-shadow:0 0 0 3px rgba(168,56,42,.12);
+  }
+
+  /* ---------- 面板 ---------- */
+  .stage{margin-top:26px;}
+  .panel{
+    display:none;
+    position:relative;
+    overflow:hidden;
+    padding:clamp(22px,6.2vw,40px);
+    border:1px solid var(--line);
+    border-radius:3px;
+    background:linear-gradient(180deg, rgba(255,253,247,.82), rgba(250,246,237,.68));
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.7) inset,
+      0 22px 44px -34px rgba(34,31,27,.55);
+  }
+  .panel::before{
+    content:"";
+    position:absolute;
+    top:0;right:0;
+    width:52%;height:42%;
+    background:radial-gradient(circle at 100% 0, rgba(34,31,27,.05), transparent 68%);
+    pointer-events:none;
+  }
+  .panel.is-active{display:block;animation:panelIn .62s cubic-bezier(.2,.65,.3,1) both;}
+  @keyframes panelIn{
+    from{opacity:0;transform:translateY(10px);}
+    to{opacity:1;transform:none;}
+  }
+  .eyebrow{
+    display:flex;align-items:center;
+    margin:0 0 10px;
+    font-family:var(--sans);
+    font-size:11px;
+    letter-spacing:.2em;
+    color:var(--ink-3);
+  }
+  .seal.mini{
+    width:22px;height:22px;
+    margin-right:9px;
+    font-size:11px;
+    box-shadow:none;
+  }
+  .title{
+    margin:.2em 0 .5em;
+    font-size:clamp(26px,7.6vw,34px);
+    font-weight:600;
+    line-height:1.42;
+    letter-spacing:.08em;
+  }
+  .lead{
+    margin:0 0 1em;
+    font-size:15px;
+    line-height:1.95;
+    color:var(--ink-2);
+    letter-spacing:.03em;
+  }
+  .prose p{
+    margin:0 0 .9em;
+    font-size:14.5px;
+    line-height:1.95;
+    color:var(--ink-2);
+    letter-spacing:.02em;
+  }
+  .prose p:last-child{margin-bottom:0;}
+  .prose .note{
+    margin-top:1.1em;
+    padding-left:13px;
+    border-left:2px solid rgba(168,56,42,.35);
+    font-size:12.5px;
+    line-height:1.9;
+    color:var(--ink-3);
+  }
+  .consent{
+    display:flex;
+    gap:11px;
+    align-items:flex-start;
+    margin:24px 0 2px;
+    font-size:13.5px;
+    line-height:1.75;
+    color:var(--ink-2);
+    cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .consent input{
+    position:absolute;
+    width:1px;height:1px;
+    opacity:0;
+    pointer-events:none;
+  }
+  .checkmark{
+    position:relative;
+    flex:0 0 auto;
+    width:18px;height:18px;
+    margin-top:3px;
+    border:1px solid rgba(34,31,27,.42);
+    border-radius:2px;
+    background:rgba(255,255,255,.35);
+    transition:background .2s,border-color .2s;
+  }
+  .checkmark::after{
+    content:"";
+    position:absolute;
+    left:5px;top:1px;
+    width:5px;height:9px;
+    border-right:1.5px solid var(--paper);
+    border-bottom:1.5px solid var(--paper);
+    transform:rotate(40deg) scale(0);
+    transition:transform .2s;
+  }
+  .consent input:checked + .checkmark{background:var(--ink);border-color:var(--ink);}
+  .consent input:checked + .checkmark::after{transform:rotate(40deg) scale(1);}
+  .consent input:focus-visible + .checkmark{outline:2px solid rgba(168,56,42,.5);outline-offset:2px;}
+
+  /* ---------- 底部导航 ---------- */
+  .nav{
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:10px 12px;
+    margin-top:28px;
+  }
+  .nav[hidden]{display:none;}
+  .btn{
+    appearance:none;
+    border:0;
+    margin:0;
+    font:inherit;
+    cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+    transition:transform .18s,box-shadow .2s,opacity .2s,color .2s;
+  }
+  .btn:active{transform:translateY(1px);}
+  .btn.primary{
+    padding:12px 30px;
+    border-radius:2px;
+    background:linear-gradient(155deg,#332e28,#1b1916 72%);
+    color:#f8f4eb;
+    font-size:14px;
+    letter-spacing:.18em;
+    box-shadow:0 14px 26px -20px rgba(34,31,27,.9);
+  }
+  .btn.primary:hover:not(:disabled){box-shadow:0 16px 26px -18px rgba(34,31,27,.95);}
+  .btn.primary:disabled{opacity:.34;cursor:not-allowed;box-shadow:none;}
+  .btn.ghost{
+    padding:12px 6px;
+    background:none;
+    color:var(--ink-3);
+    font-size:12.5px;
+    letter-spacing:.14em;
+  }
+  .btn.ghost:hover{color:var(--ink);}
+  .btn.ghost[hidden]{display:none;}
+  #nav-hint{
+    flex:1 1 120px;
+    min-height:1.2em;
+    margin:0;
+    font-family:var(--sans);
+    font-size:11.5px;
+    line-height:1.6;
+    letter-spacing:.06em;
+    color:var(--ink-3);
+    text-align:right;
+    transition:color .2s;
+  }
+  #nav-hint.is-warn{color:var(--cinnabar);}
+  .btn:focus-visible, .realm:focus-visible, .chip:focus-visible, .tone:focus-visible, .btn.text:focus-visible{
+    outline:2px solid rgba(168,56,42,.5);
+    outline-offset:2px;
+  }
+
+  /* ---------- 滑杆题 ---------- */
+  .q-card{
+    padding:18px 0;
+    border-top:1px solid var(--line-soft);
+  }
+  .q-card:first-of-type{border-top:0;padding-top:4px;}
+  .q-head{display:flex;gap:10px;align-items:baseline;margin-bottom:14px;}
+  .q-no{
+    flex:0 0 auto;
+    font-family:var(--sans);
+    font-size:11px;
+    letter-spacing:.12em;
+    color:var(--cinnabar);
+  }
+  .q-title{margin:0;font-size:15.5px;font-weight:500;line-height:1.7;letter-spacing:.05em;}
+  .scale-row{display:flex;align-items:center;gap:8px;}
+  .scale-end{
+    flex:0 0 auto;
+    max-width:4.8em;
+    font-family:var(--sans);
+    font-size:10.5px;
+    line-height:1.4;
+    letter-spacing:.06em;
+    color:var(--ink-3);
+  }
+  .scale-end.end{text-align:right;}
+  input[type="range"]{
+    -webkit-appearance:none;
+    appearance:none;
+    flex:1 1 auto;
+    min-width:0;
+    width:100%;
+    height:28px;
+    margin:0;
+    background:transparent;
+    cursor:pointer;
+  }
+  input[type="range"]::-webkit-slider-runnable-track{
+    height:2px;
+    border-radius:2px;
+    background:linear-gradient(90deg,var(--ink-4),var(--ink-2));
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:18px;height:18px;
+    margin-top:-8px;
+    border-radius:50%;
+    border:3px solid var(--paper);
+    background:var(--ink);
+    box-shadow:0 0 0 1px rgba(34,31,27,.5);
+    transition:transform .15s,background .15s;
+  }
+  input[type="range"]:active::-webkit-slider-thumb{background:var(--cinnabar);transform:scale(1.12);}
+  input[type="range"]:focus-visible{outline:none;}
+  input[type="range"]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px rgba(168,56,42,.26);}
+  input[type="range"]::-moz-range-track{
+    height:2px;border-radius:2px;
+    background:linear-gradient(90deg,var(--ink-4),var(--ink-2));
+  }
+  input[type="range"]::-moz-range-thumb{
+    width:14px;height:14px;
+    border-radius:50%;
+    border:3px solid var(--paper);
+    background:var(--ink);
+    box-shadow:0 0 0 1px rgba(34,31,27,.5);
+  }
+  input[type="range"]::-moz-range-progress{height:2px;background:var(--ink-2);}
+  .q-read{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    gap:12px;
+    margin-top:4px;
+    font-family:var(--sans);
+    font-size:11px;
+    letter-spacing:.1em;
+    color:var(--ink-4);
+  }
+  .q-value{font-variant-numeric:tabular-nums;color:var(--ink-3);}
+  .q-value.is-touched{color:var(--cinnabar);}
+
+  /* ---------- 墨境 ---------- */
+  .realm-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:12px;
+    margin-top:20px;
+  }
+  .realm{
+    position:relative;
+    display:block;
+    width:100%;
+    padding:15px 13px 13px;
+    border:1px solid var(--line);
+    border-radius:2px;
+    background:rgba(255,255,255,.3);
+    color:var(--ink);
+    font:inherit;
+    text-align:left;
+    cursor:pointer;
+    overflow:hidden;
+    transition:border-color .25s,background .25s,transform .2s;
+  }
+  .realm:hover{background:rgba(255,255,255,.5);}
+  .realm:active{transform:scale(.995);}
+  .realm svg{
+    display:block;
+    width:100%;
+    height:54px;
+    margin-bottom:11px;
+    color:var(--ink-2);
+  }
+  .realm-name{display:block;font-size:16px;letter-spacing:.3em;line-height:1.4;}
+  .realm-desc{
+    display:block;
+    margin-top:5px;
+    font-size:11px;
+    line-height:1.65;
+    letter-spacing:.02em;
+    color:var(--ink-3);
+  }
+  .realm[aria-pressed="true"]{
+    border-color:rgba(168,56,42,.62);
+    background:rgba(168,56,42,.045);
+  }
+  .realm[aria-pressed="true"]::after{
+    content:"选";
+    position:absolute;
+    top:8px;right:8px;
+    width:17px;height:17px;
+    display:grid;place-items:center;
+    border:1px solid var(--cinnabar);
+    border-radius:1px;
+    font-family:var(--sans);
+    font-size:9.5px;
+    line-height:1;
+    color:var(--cinnabar);
+    background:rgba(250,246,237,.7);
+  }
+  #realm-note{
+    margin-top:16px;
+    font-size:13px;
+    letter-spacing:.06em;
+    color:var(--ink-3);
+    min-height:1.6em;
+  }
+
+  /* ---------- 墨语 ---------- */
+  .chat-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    padding-bottom:12px;
+    margin-bottom:18px;
+    border-bottom:1px solid var(--line-soft);
+    font-family:var(--sans);
+    font-size:11px;
+    letter-spacing:.14em;
+    color:var(--ink-3);
+  }
+  #realm-seal{
+    color:var(--cinnabar);
+    border:1px solid rgba(168,56,42,.34);
+    border-radius:1px;
+    padding:2px 9px;
+    letter-spacing:.24em;
+  }
+  #round-label{font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .chat-stream{
+    display:flex;
+    flex-direction:column;
+    gap:17px;
+    max-height:46vh;
+    overflow-y:auto;
+    padding-right:2px;
+    -webkit-overflow-scrolling:touch;
+  }
+  .msg{
+    margin:0;
+    font-size:14px;
+    line-height:1.92;
+    letter-spacing:.03em;
+    animation:msgIn .5s ease both;
+  }
+  .msg .who{
+    display:block;
+    margin-bottom:4px;
+    font-family:var(--sans);
+    font-size:10.5px;
+    letter-spacing:.22em;
+    color:var(--ink-4);
+  }
+  .msg.guide{padding-left:14px;border-left:1px solid rgba(34,31,27,.2);}
+  .msg.user{
+    align-self:flex-end;
+    max-width:88%;
+    padding-right:12px;
+    border-right:1px solid rgba(168,56,42,.38);
+    color:var(--ink-3);
+    text-align:right;
+  }
+  .msg.user .who{color:var(--cinnabar);}
+  @keyframes msgIn{from{opacity:0;transform:translateY(7px);}to{opacity:1;transform:none;}}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 12px;}
+  .chip{
+    max-width:100%;
+    padding:7px 12px;
+    border:1px solid var(--line);
+    border-radius:1px;
+    background:rgba(255,255,255,.4);
+    color:var(--ink-2);
+    font:inherit;
+    font-size:12.5px;
+    line-height:1.6;
+    letter-spacing:.03em;
+    text-align:left;
+    cursor:pointer;
+    transition:border-color .2s,color .2s,background .2s;
+  }
+  .chip:hover{border-color:rgba(34,31,27,.3);}
+  .chip[aria-pressed="true"]{
+    border-color:rgba(168,56,42,.6);
+    color:var(--cinnabar);
+    background:rgba(168,56,42,.05);
+  }
+  #reply-input{
+    display:block;
+    width:100%;
+    min-height:64px;
+    margin:0;
+    padding:10px 12px;
+    border:1px solid var(--line);
+    border-radius:2px;
+    background:rgba(255,255,255,.3);
+    color:var(--ink);
+    font:inherit;
+    font-size:13.5px;
+    line-height:1.8;
+    letter-spacing:.03em;
+    resize:vertical;
+  }
+  #reply-input::placeholder{color:var(--ink-4);}
+  #reply-input:focus{outline:1px solid rgba(168,56,42,.45);border-color:transparent;}
+  .round-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px;}
+  .btn.text{
+    padding:8px 4px;
+    background:none;
+    color:var(--ink-3);
+    font-size:12.5px;
+    letter-spacing:.1em;
+  }
+  .btn.text:hover{color:var(--ink);}
+  .round-done{
+    margin:18px 0 0;
+    padding:14px 16px;
+    border:1px solid rgba(168,56,42,.22);
+    border-radius:2px;
+    background:rgba(168,56,42,.035);
+    font-size:13.5px;
+    line-height:1.9;
+    color:var(--ink-2);
+    letter-spacing:.03em;
+  }
+  .round-done[hidden]{display:none;}
+
+  /* ---------- 落墨 ---------- */
+  .ink-frame{
+    position:relative;
+    margin-top:18px;
+    border:1px solid rgba(34,31,27,.2);
+    border-radius:2px;
+    background:
+      radial-gradient(circle at 30% 12%, rgba(255,255,255,.55), transparent 60%),
+      linear-gradient(180deg,#fbf8f1,#f1ebdd);
+    box-shadow:inset 0 0 44px rgba(34,31,27,.06);
+    overflow:hidden;
+    touch-action:none;
+  }
+  #ink-canvas{
+    display:block;
+    width:100%;
+    height:auto;
+    aspect-ratio:4 / 5;
+    max-width:100%;
+    touch-action:none;
+    cursor:crosshair;
+  }
+  #ink-bloom{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    pointer-events:none;
+  }
+  .ink-hint{
+    position:absolute;
+    inset:0;
+    display:grid;
+    place-items:center;
+    padding:0 24px;
+    font-family:var(--sans);
+    font-size:12px;
+    letter-spacing:.24em;
+    color:var(--ink-4);
+    text-align:center;
+    pointer-events:none;
+    transition:opacity .7s;
+  }
+  .ink-hint.is-hidden{opacity:0;}
+  .ink-tools{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px 14px;
+    margin-top:13px;
+  }
+  .tone-group{display:flex;align-items:center;gap:7px;}
+  .tone-group-label{
+    font-family:var(--sans);
+    font-size:10.5px;
+    letter-spacing:.14em;
+    color:var(--ink-4);
+    margin-right:1px;
+  }
+  .tone{
+    min-width:34px;
+    padding:5px 9px;
+    border:1px solid var(--line);
+    border-radius:1px;
+    background:rgba(255,255,255,.35);
+    color:var(--ink-3);
+    font:inherit;
+    font-size:12px;
+    letter-spacing:.06em;
+    cursor:pointer;
+    transition:.2s;
+  }
+  .tone[aria-pressed="true"]{border-color:rgba(168,56,42,.55);color:var(--cinnabar);background:rgba(168,56,42,.05);}
+  .fine{
+    margin:14px 0 0;
+    font-size:11.5px;
+    line-height:1.85;
+    letter-spacing:.04em;
+    color:var(--ink-3);
+  }
+
+  /* ---------- 结果 ---------- */
+  .result-bars{display:flex;flex-direction:column;gap:19px;margin-top:22px;}
+  .bar-row{
+    display:grid;
+    grid-template-columns:3.1em minmax(0,1fr) auto;
+    gap:12px;
+    align-items:center;
+  }
+  .bar-name{font-size:12.5px;letter-spacing:.12em;color:var(--ink-2);white-space:nowrap;}
+  .bar-stack{min-width:0;}
+  .bar-line{
+    position:relative;
+    height:5px;
+    margin:4px 0;
+    border-radius:1px;
+    background:rgba(34,31,27,.06);
+    overflow:hidden;
+  }
+  .bar-fill{
+    position:absolute;left:0;top:0;bottom:0;
+    width:0;
+    border-radius:1px;
+    transition:width 1.05s cubic-bezier(.22,.61,.36,1);
+  }
+  .bar-fill.pre{background:rgba(34,31,27,.3);}
+  .bar-fill.post{background:linear-gradient(90deg,rgba(168,56,42,.5),var(--cinnabar));}
+  .bar-vals{
+    display:flex;
+    gap:12px;
+    margin-top:3px;
+    font-family:var(--sans);
+    font-size:10.5px;
+    letter-spacing:.05em;
+    color:var(--ink-4);
+    font-variant-numeric:tabular-nums;
+  }
+  .bar-vals b{font-weight:600;color:var(--ink-3);}
+  .bar-delta{
+    min-width:4.4em;
+    font-family:var(--sans);
+    font-size:11px;
+    line-height:1.7;
+    letter-spacing:.04em;
+    color:var(--ink-3);
+    text-align:right;
+    white-space:nowrap;
+  }
+  .bar-delta.is-down{color:var(--cinnabar);}
+  .legend{
+    display:flex;
+    flex-wrap:wrap;
+    gap:16px;
+    margin-top:18px;
+    font-family:var(--sans);
+    font-size:10.5px;
+    letter-spacing:.08em;
+    color:var(--ink-3);
+  }
+  .legend i{display:inline-block;width:16px;height:4px;margin-right:6px;vertical-align:2px;border-radius:1px;}
+  .legend i.pre{background:rgba(34,31,27,.3);}
+  .legend i.post{background:linear-gradient(90deg,rgba(168,56,42,.5),var(--cinnabar));}
+  .feedback{
+    margin:26px 0 0;
+    padding-left:14px;
+    border-left:2px solid rgba(168,56,42,.4);
+    font-size:15px;
+    line-height:2;
+    letter-spacing:.03em;
+    color:var(--ink-2);
+  }
+  .result-meta{
+    margin:16px 0 0;
+    font-family:var(--sans);
+    font-size:11px;
+    line-height:1.9;
+    letter-spacing:.06em;
+    color:var(--ink-3);
+  }
+  .ink-preview{margin-top:26px;}
+  .preview-figure{
+    margin:0;
+    display:inline-block;
+    max-width:100%;
+    padding:9px;
+    border:1px solid var(--line);
+    background:rgba(255,253,247,.7);
+    box-shadow:0 12px 26px -24px rgba(34,31,27,.7);
+  }
+  .preview-figure img{
+    display:block;
+    width:164px;
+    max-width:100%;
+    height:auto;
+    background:#f8f4ec;
+  }
+  .preview-figure figcaption{
+    margin-top:7px;
+    font-family:var(--sans);
+    font-size:10px;
+    letter-spacing:.14em;
+    color:var(--ink-4);
+    text-align:center;
+  }
+  .preview-empty{font-size:12.5px;color:var(--ink-3);letter-spacing:.04em;}
+
+  /* ---------- 结束 ---------- */
+  .seal-stamp{
+    width:72px;height:72px;
+    display:grid;place-items:center;
+    margin:6px 0 24px;
+    border:2px solid var(--cinnabar);
+    border-radius:3px;
+    background:rgba(168,56,42,.05);
+    color:var(--cinnabar);
+    font-size:20px;
+    line-height:1;
+    letter-spacing:.08em;
+    transform:rotate(-4deg);
+    animation:stampIn .8s cubic-bezier(.2,.8,.2,1) both;
+  }
+  @keyframes stampIn{
+    0%{opacity:0;transform:rotate(-14deg) scale(1.35);}
+    60%{opacity:1;}
+    100%{opacity:1;transform:rotate(-4deg) scale(1);}
+  }
+  .meta-grid{
+    display:grid;
+    grid-template-columns:auto minmax(0,1fr);
+    gap:9px 18px;
+    margin:24px 0;
+    font-size:12.5px;
+    line-height:1.8;
+  }
+  .meta-grid dt{
+    font-family:var(--sans);
+    font-size:11px;
+    letter-spacing:.14em;
+    color:var(--ink-4);
+    white-space:nowrap;
+  }
+  .meta-grid dd{
+    margin:0;
+    color:var(--ink-2);
+    overflow-wrap:anywhere;
+    word-break:break-word;
+    font-variant-numeric:tabular-nums;
+  }
+  .end-actions{display:flex;flex-wrap:wrap;gap:10px 14px;margin-top:26px;}
+  .site-foot{
+    margin-top:30px;
+    font-family:var(--sans);
+    font-size:10px;
+    line-height:1.9;
+    letter-spacing:.16em;
+    color:var(--ink-4);
+    text-align:center;
+  }
+
+  /* ---------- 轻提示 ---------- */
+  .toast{
+    position:fixed;
+    left:50%;
+    bottom:24px;
+    z-index:9;
+    max-width:calc(100% - 40px);
+    padding:9px 16px;
+    border-radius:2px;
+    background:rgba(28,25,21,.92);
+    color:#f6f2e9;
+    font-family:var(--sans);
+    font-size:12px;
+    line-height:1.6;
+    letter-spacing:.06em;
+    text-align:center;
+    opacity:0;
+    transform:translate(-50%,10px);
+    pointer-events:none;
+    transition:opacity .3s,transform .3s;
+  }
+  .toast.is-on{opacity:1;transform:translate(-50%,0);}
+  .noscript{
+    margin:16px 0;
+    padding:12px 14px;
+    border:1px solid rgba(168,56,42,.3);
+    background:rgba(168,56,42,.04);
+    font-size:13px;
+    line-height:1.8;
+    color:var(--ink-2);
+    letter-spacing:.03em;
+  }
+
+  @media (min-width:720px){
+    #app{padding:42px 28px 60px;}
+    .stage{margin-top:32px;}
+    .q-title{font-size:16px;}
+    #reply-input{min-height:74px;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{
+      animation-duration:.01ms !important;
+      animation-iteration-count:1 !important;
+      transition-duration:.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <noscript><p class="noscript">这段原型需要启用 JavaScript 才能继续。请换一个允许脚本运行的浏览器再打开。</p></noscript>
+  <header class="site-head">
+    <div class="brand">
+      <span class="seal" aria-hidden="true">墨</span>
+      <div class="brand-text">
+        <p class="brand-title">墨间</p>
+        <p class="brand-sub">一段与自己的相处 · 约 8 分钟</p>
+      </div>
+    </div>
+    <div class="progress-meta">
+      <span id="step-name">知情与说明</span>
+      <span id="step-count">第 1 步，共 8 步</span>
+    </div>
+    <div class="progress-track" aria-hidden="true"><div id="progress-fill"></div></div>
+  </header>
+
+  <main class="stage">
+
+    <!-- ① 知情与说明 -->
+    <section class="panel is-active" id="step-1" data-step="1" aria-labelledby="step-1-title">
+      <p class="eyebrow"><span class="seal mini" aria-hidden="true">壹</span>知情与说明</p>
+      <h1 class="title" id="step-1-title">先在这里，停一停</h1>
+      <p class="lead">接下来大约八分钟，是一段只属于你的安静时间。</p>
+      <div class="prose">
+        <p>这是一次关于「与自己相处」的小练习。你会先看见此刻的状态，选一处墨境，和几段写好的温柔文字来回六轮，然后亲手落一笔墨。</p>
+        <p>你不需要写得好，也不需要说得对。这里没有评分，没有标准答案，也没有人在看。</p>
+        <p>所有作答与墨迹只保存在这台设备的浏览器里（localStorage），不会上传到任何服务器，页面也不会发出任何网络请求。</p>
+        <p class="note">这是一段自我陪伴的练习，不是医疗建议，也不替代任何专业支持。如果此刻你正处在很难的处境里，请优先联系你信任的人，或当地的专业机构。你可以随时停下，关掉页面就好。</p>
+      </div>
+      <label class="consent" for="consent-check">
+        <input type="checkbox" id="consent-check" />
+        <span class="checkmark" aria-hidden="true"></span>
+        <span>我已读过上面的说明，愿意开始这段相处。</span>
+      </label>
+    </section>
+
+    <!-- ② 前测 -->
+    <section class="panel" id="step-2" data-step="2" aria-labelledby="step-2-title">
+      <p class="eyebrow"><span class="seal mini" aria-hidden="true">贰</span>前测 · 此刻的我</p>
+      <h1 class="title" id="step-2-title">先看一眼此刻</h1>
+      <p class="lead">没有对错，凭第一感觉移动滑杆就好。三道题都碰一下，才算答过。</p>
+
+      <div class="q-card">
+        <div class="q-head"><span class="q-no">一</span><h2 class="q-title">此刻，心里有些紧绷</h2></div>
+        <div class="scale-row">
+          <span class="scale-end">几乎没有</span>
+          <input type="range" id="pre-stress" min="1" max="7" step="1" value="4" aria-label="此刻心里的紧绷程度，1 为几乎没有，7 为非常明显" />
+          <span class="scale-end end">非常明显</span>
+        </div>
+        <div class="q-read"><span>1 — 7</span><span class="q-value" id="pre-stress-value">尚未选择</span></div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-head"><span class="q-no">二</span><h2 class="q-title">此刻，身上有些疲惫</h2></div>
+        <div class="scale-row">
+          <span class="scale-end">几乎没有</span>
+          <input type="range" id="pre-fatigue" min="1" max="7" step="1" value="4" aria-label="此刻身上的疲惫程度，1 为几乎没有，7 为非常明显" />
+          <span class="scale-end end">非常明显</span>
+        </div>
+        <div class="q-read"><span>1 — 7</span><span class="q-value" id="pre-fatigue-value">尚未选择</span></div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-head"><span class="q-no">三</span><h2 class="q-title">此刻，念头有些纷乱</h2></div>
+        <div class="scale-row">
+          <span class="scale-end">几乎没有</span>
+          <input type="range" id="pre-scatter" min="1" max="7" step="1" value="4" aria-label="此刻念头的纷乱程度，1 为几乎没有，7 为非常明显" />
+          <span class="scale-end end">非常明显</span>
+        </div>
+        <div class="q-read"><span>1 — 7</span><span class="q-value" id="pre-scatter-value">尚未选择</span></div>
+      </div>
+    </section>
+
+    <!-- ③ 选墨境 -->
+    <section class="panel" id="step-3" data-step="3" aria-labelledby="step-3-title">
+      <p class="eyebrow"><span class="seal mini" aria-hidden="true">叁</span>选一处墨境</p>
+      <h1 class="title" id="step-3-title">想在哪里待一会儿</h1>
+      <p class="lead">选一个此刻愿意靠近的地方。没有好坏，只有此刻的愿意。</p>
+
+      <div class="realm-grid" id="realm-grid" role="group" aria-label="选择一处墨境">
+        <button type="button" class="realm" data-realm="mountains" aria-pressed="false">
+          <svg viewBox="0 0 120 56" fill="none" aria-hidden="true">
+            <path d="M4 45 L28 20 L42 33 L58 11 L92 45 Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" opacity=".72"/>
+            <path d="M14 49 H108" stroke="currentColor" stroke-width=".8" opacity=".28"/>
+            <path d="M34 26 Q45 21 54 26" stroke="currentColor" stroke-width=".8" opacity=".34"/>
+            <path d="M70 45 Q76 36 84 45" stroke="currentColor" stroke-width=".9" opacity=".4"/>
+          </svg>
+          <span class="realm-name">远山</span>
+          <span class="realm-desc">山色有无中。想把目光放远一点的时候。</span>
+        </button>
+        <button type="button" class="realm" data-realm="water" aria-pressed="false">
+          <svg viewBox="0 0 120 56" fill="none" aria-hidden="true">
+            <path d="M8 22 Q24 18 40 22 T72 22 T112 22" stroke="currentColor" stroke-width="1" opacity=".5"/>
+            <path d="M14 33 Q30 29 46 33 T78 33 T106 33" stroke="currentColor" stroke-width="1" opacity=".38"/>
+            <path d="M22 44 Q36 40 50 44 T82 44 T104 44" stroke="currentColor" stroke-width="1" opacity=".26"/>
+            <circle cx="88" cy="12" r="5" stroke="currentColor" stroke-width="1" opacity=".45"/>
+          </svg>
+          <span class="realm-name">静水</span>
+          <span class="realm-desc">水面平，风也轻。想让念头沉一沉的时候。</span>
+        </button>
+        <button type="button" class="realm" data-realm="bamboo" aria-pressed="false">
+          <svg viewBox="0 0 120 56" fill="none" aria-hidden="true">
+            <path d="M34 52 L34 8" stroke="currentColor" stroke-width="1.6" opacity=".62"/>
+            <path d="M58 52 L58 14" stroke="currentColor" stroke-width="1.3" opacity=".5"/>
+            <path d="M82 52 L82 6" stroke="currentColor" stroke-width="1.1" opacity=".4"/>
+            <path d="M34 20 H46 M34 38 H44 M58 27 L70 20 M58 40 L70 47 M82 18 L94 12" stroke="currentColor" stroke-width="1.1" opacity=".55"/>
+            <path d="M30 14 Q36 10 40 14" stroke="currentColor" stroke-width="1" opacity=".5"/>
+          </svg>
+          <span class="realm-name">疏竹</span>
+          <span class="realm-desc">竹影疏，声也疏。想给自己留一点空白的时候。</span>
+        </button>
+        <button type="button" class="realm" data-realm="pavilion" aria-pressed="false">
+          <svg viewBox="0 0 120 56" fill="none" aria-hidden="true">
+            <path d="M16 24 Q60 2 104 24 Q60 18 16 24 Z" stroke="currentColor" stroke-width="1.2" opacity=".65"/>
+            <path d="M30 24 L30 46 M52 24 L52 46 M68 24 L68 46 M90 24 L90 46" stroke="currentColor" stroke-width="1" opacity=".45"/>
+            <path d="M18 48 H102" stroke="currentColor" stroke-width=".9" opacity=".3"/>
+            <path d="M28 35 H92" stroke="currentColor" stroke-width=".8" opacity=".26"/>
+          </svg>
+          <span class="realm-name">空亭</span>
+          <span class="realm-desc">亭中无人，四面临风。什么都不想做的时候。</span>
+        </button>
+      </div>
+      <p id="realm-note" aria-live="polite"></p>
+    </section>
+
+    <!-- ④ 墨语六轮 -->
+    <section class="panel" id="step-4" data-step="4" aria-labelledby="step-4-title">
+      <p class="eyebrow"><span class="seal mini" aria-hidden="true">肆</span>墨语 · 六轮</p>
+      <h1 class="title" id="step-4-title">听一句，回一句</h1>
+      <p class="lead">下面这些文字是提前写好的，不是 AI 在你说话之后临时生成的。你可以选一句回应，也可以只是安静地待着。</p>
+
+      <div class="chat-head">
+        <span id="realm-seal">远山</span>
+        <span id="round-label">第 1 轮 · 共 6 轮</span>
+      </div>
+      <div class="chat-stream" id="chat-stream" aria-live="polite"></div>
+      <div class="chips" id="chips" role="group" aria-label="选一句回应"></div>
+      <textarea id="reply-input" rows="2" maxlength="140" placeholder="也可以写一句自己的话（可以留空）"></textarea>
+      <div class="round-actions">
+        <button type="button" class="btn primary" id="reply-btn">轻轻回应</button>
+        <button type="button" class="btn text" id="skip-btn">就这样，继续</button>
+      </div>
+      <p class="round-done" id="round-done" hidden>六轮走完了。谢谢你愿意一句一句地待在这里。</p>
+    </section>
+
+    <!-- ⑤ 落墨 -->
+    <section class="panel" id="step-5" data-step="5" aria-labelledby="step-5-title">
+      <p class="eyebrow"><span class="seal mini" aria-hidden="true">伍</span>落一笔墨</p>
+      <h1 class="title" id="step-5-title">让手先安静下来</h1>
+      <p class="lead">不用画得像什么。按住纸面慢慢走一段，墨会自己晕开；也可以点一下，落一滴。</p>
+
+      <div class="ink-frame" id="ink-frame">
+        <canvas id="ink-canvas" aria-label="落墨画布，可拖拽或点击作画"></canvas>
+        <canvas id="ink-bloom" aria-hidden="true"></canvas>
+        <div class="ink-hint" id="ink-hint">按住纸面，慢慢落墨</div>
+      </div>
+      <div class="ink-tools">
+        <div class="tone-group" id="tone-group" role="group" aria-label="墨色浓淡">
+          <span class="tone-group-label">墨色</span>
+          <button type="button" class="tone" data-tone="light" aria-pressed="false">淡</button>
+          <button type="button" class="tone" data-tone="medium" aria-pressed="true">中</button>
+          <button type="button" class="tone" data-tone="dark" aria-pressed="false">浓</button>
+        </div>
+        <button type="button" class="btn text" id="clear-ink">重新落墨</button>
+      </div>
+      <p class="fine">没有时间限制，落多落少都可以。这一笔不会被评分，也不会被别人看见。</p>
+    </section>
+
+    <!-- ⑥ 后测 -->
+    <section class="panel" id="step-6" data-step="6" aria-labelledby="step-6-title">
+      <p class="eyebrow"><span class="seal mini" aria-hidden="true">陆</span>后测 · 再看见</p>
+      <h1 class="title" id="step-6-title">再看一眼此刻</h1>
+      <p class="lead">还是那三道题，用第一感觉回答就好。后面还有两句，关于刚才的这两段。</p>
+
+      <div class="q-card">
+        <div class="q-head"><span class="q-no">一</span><h2 class="q-title">此刻，心里有些紧绷</h2></div>
+        <div class="scale-row">
+          <span class="scale-end">几乎没有</span>
+          <input type="range" id="post-stress" min="1" max="7" step="1" value="4" aria-label="此刻心里的紧绷程度，1 为几乎没有，7 为非常明显" />
+          <span class="scale-end end">非常明显</span>
+        </div>
+        <div class="q-read"><span>1 — 7</span><span class="q-value" id="post-stress-value">尚未选择</span></div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-head"><span class="q-no">二</span><h2 class="q-title">此刻，身上有些疲惫</h2></div>
+        <div class="scale-row">
+          <span class="scale-end">几乎没有</span>
+          <input type="range" id="post-fatigue" min="1" max="7" step="1" value="4" aria-label="此刻身上的疲惫程度，1 为几乎没有，7 为非常明显" />
+          <span class="scale-end end">非常明显</span>
+        </div>
+        <div class="q-read"><span>1 — 7</span><span class="q-value" id="post-fatigue-value">尚未选择</span></div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-head"><span class="q-no">三</span><h2 class="q-title">此刻，念头有些纷乱</h2></div>
+        <div class="scale-row">
+          <span class="scale-end">几乎没有</span>
+          <input type="range" id="post-scatter" min="1" max="7" step="1" value="4" aria-label="此刻念头的纷乱程度，1 为几乎没有，7 为非常明显" />
+          <span class="scale-end end">非常明显</span>
+        </div>
+        <div class="q-read"><span>1 — 7</span><span class="q-value" id="post-scatter-value">尚未选择</span></div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-head"><span class="q-no">四</span><h2 class="q-title">刚才那六轮里，我感到被安静地陪着</h2></div>
+        <div class="scale-row">
+          <span class="scale-end">完全不同意</span>
+          <input type="range" id="ux-accompany" min="1" max="7" step="1" value="4" aria-label="刚才那六轮里，我感到被安静地陪着，1 为完全不同意，7 为完全同意" />
+          <span class="scale-end end">完全同意</span>
+        </div>
+        <div class="q-read"><span>1 — 7</span><span class="q-value" id="ux-accompany-value">尚未选择</span></div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-head"><span class="q-no">五</span><h2 class="q-title">落墨的时候，我松了一松</h2></div>
+        <div class="scale-row">
+          <span class="scale-end">完全不同意</span>
+          <input type="range" id="ux-ease" min="1" max="7" step="1" value="4" aria-label="落墨的时候，我松了一松，1 为完全不同意，7 为完全同意" />
+          <span class="scale-end end">完全同意</span>
+        </div>
+        <div class="q-read"><span>1 — 7</span><span class="q-value" id="ux-ease-value">尚未选择</span></div>
+      </div>
+
+      <p class="fine">提交之后，这一段就留在原处了，不能再回头修改。</p>
+    </section>
+
+    <!-- ⑦ 结果 -->
+    <section class="panel" id="step-7" data-step="7" aria-labelledby="step-7-title">
+      <p class="eyebrow"><span class="seal mini" aria-hidden="true">柒</span>一点点变化</p>
+      <h1 class="title" id="step-7-title">刚才，和现在</h1>
+      <p class="lead">没有应该出现的结果。数字只是数字，你才是这八分钟里真正发生的事。</p>
+
+      <div class="result-bars" id="result-bars"></div>
+      <div class="legend"><span><i class="pre"></i>刚才</span><span><i class="post"></i>现在</span></div>
+      <p class="feedback" id="result-feedback"></p>
+      <p class="result-meta" id="result-meta"></p>
+      <div class="ink-preview" id="ink-preview"></div>
+    </section>
+
+    <!-- ⑧ 结束 -->
+    <section class="panel" id="step-8" data-step="8" aria-labelledby="step-8-title">
+      <div class="seal-stamp" aria-hidden="true">安放</div>
+      <p class="eyebrow"><span class="seal mini" aria-hidden="true">捌</span>到这里</p>
+      <h1 class="title" id="step-8-title">到这里，就好</h1>
+      <p class="lead">谢谢你把这一小段时间留给自己。</p>
+      <p class="prose">这一页关掉之后，墨迹和数字都会留在这台设备里。你可以下载一份实验日志带走，也可以什么也不带走，就让它待在这儿。</p>
+      <dl class="meta-grid" id="finish-meta"></dl>
+      <p class="fine">本次记录仅保存在本机浏览器（localStorage），不会上传到任何服务器。这是一段自我陪伴的练习，不是医疗建议，也不替代任何专业支持。你随时可以点「重新开始」，清空这台设备上的记录。</p>
+      <div class="end-actions">
+        <button type="button" class="btn primary" id="export-8">下载实验日志</button>
+        <button type="button" class="btn text" id="restart-btn">重新开始</button>
+      </div>
+    </section>
+
+  </main>
+
+  <nav class="nav" id="nav-bar" aria-label="步骤导航">
+    <button type="button" class="btn ghost" id="back-btn" hidden>上一步</button>
+    <button type="button" class="btn primary" id="next-btn" disabled>开始</button>
+    <p id="nav-hint" role="status"></p>
+  </nav>
+
+  <footer class="site-foot">墨间 · 设计提案原型 ／ 非医疗建议 ／ 所有数据仅存本机</footer>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ==========================================================
+     墨间 · 水墨疗愈会话原型
+     骨架参考：原实验站的步骤守卫 / 必答校验 / 6 轮上限 /
+     “第 N 步，共 M 步” / CSV 导出 / participant_id 规则；
+     视觉与文案为全新设计，不调用任何 API。
+     ========================================================== */
+
+  var VERSION = '1.0.0';
+  var STORE_KEY = 'mojian.session.v1';
+  var STEP_TOTAL = 8;
+  var STEP_IDS = ['step-1', 'step-2', 'step-3', 'step-4', 'step-5', 'step-6', 'step-7', 'step-8'];
+  var STEP_NAMES = ['知情与说明', '前测 · 此刻的我', '选一处墨境', '墨语六轮', '落一笔墨', '后测 · 再看见', '一点点变化', '到此为止'];
+
+  var REALMS = {
+    mountains: {
+      name: '远山', code: 'mt', seal: '山',
+      line: '山色有无中'
+    },
+    water: {
+      name: '静水', code: 'wt', seal: '水',
+      line: '水面平，风也轻'
+    },
+    bamboo: {
+      name: '疏竹', code: 'bm', seal: '竹',
+      line: '竹影疏，声也疏'
+    },
+    pavilion: {
+      name: '空亭', code: 'pv', seal: '亭',
+      line: '亭中无人，四面临风'
+    }
+  };
+
+  var SCALE_WORDS = { 1: '几乎没有', 2: '很轻', 3: '有一点', 4: '说不上', 5: '比较明显', 6: '很明显', 7: '非常明显' };
+  var SCALE_AGREE = { 1: '完全不同意', 2: '不同意', 3: '有点不同意', 4: '说不上', 5: '有点同意', 6: '同意', 7: '完全同意' };
+
+  /* 本地预置“墨语”脚本库：按 墨境 × 轮次 × 前测分数分档 选取。
+     low  <= 9，mid 10–14，high >= 15（三项前测之和）。 */
+  var GUIDE = {
+    mountains: {
+      low: [
+        '山在远处，也在你看不见的地方。先不急着说什么——此刻把目光放远一点，你最先看见的是什么？',
+        '山的轮廓要退后一点才看得清。你最近有没有哪一刻，忽然觉得事情没那么紧了？',
+        '山色有无之间，最耐看。你身上有没有一部分，是你自己也不太常看见的？',
+        '远处的山和脚下的路，是同一件事。你今天为自己做过的一件小事，是什么？',
+        '云散了，山还在。此刻再回头看你带来的那件事，它的大小有变化吗？',
+        '山依旧是山，你依旧是你。到这儿为止，你想带下山的是什么？'
+      ],
+      mid: [
+        '把眼睛从眼前挪开一会儿，远处的山不催你。你愿意先告诉我，今天你的脚步是快还是慢吗？',
+        '走到半山，风会大一些。你现在最想喘口气的地方，是哪里？',
+        '山从不同时露出全部。你愿意让我看见哪一面？',
+        '山路上偶尔会遇到同行的人。最近有谁，让你觉得不必解释太多？',
+        '走到这里，风停了一会儿。你愿意把刚才想到的一点点，留在纸上吗？',
+        '回头看看来路，比你想象的要长。你想对自己说一句什么？'
+      ],
+      high: [
+        '山不动，云替它走。你心里那些没放下的事，可以先搁在山脚下。此刻，你最想先搁下哪一件？',
+        '山路弯，不必一口气走到顶。此刻如果只允许你走一小步，你会往哪个方向迈？',
+        '雾把山遮住的时候，山依然在那里。你现在最怕被看见的是哪一部分？',
+        '山不会因为一场雨就矮下去。你身上有没有什么东西，是你撑过来的证据？',
+        '山不会要求你立刻轻松。如果只允许松一格，你想先松开哪里？',
+        '山顶不一定有答案，但风是真的。现在，你愿意把最后一点什么放下？'
+      ]
+    },
+    water: {
+      low: [
+        '水面静下来，才照得见东西。先不急着说，此刻你心里最清楚的一个感觉是什么？',
+        '水不解释自己为什么清。你有没有哪一刻，是不需要被理解的？',
+        '水面照见天，也照见你。你愿意在水边多坐一会儿吗？',
+        '一瓢水也能映出整片天。今天有没有一个小瞬间，让你觉得还不错？',
+        '水面开始平了。你带来的那点乱，现在还在吗？',
+        '水还是那水，你已经坐了一会儿。你想带走的是一句什么话？'
+      ],
+      mid: [
+        '把手里的事放一放，看水。你今天最想让它安静下来的，是哪一处？',
+        '水底的石头不会被水带走。什么东西是你不想被改变的？',
+        '涟漪一圈一圈散开，最后都会平。你想让哪一圈先散开？',
+        '水不急，却一直在走。你最近在慢慢做的事是什么？',
+        '把手浸进水里，是凉的，也是真的。此刻你的身体有什么感觉？',
+        '水面映出的那个人，你愿意怎样称呼他／她？'
+      ],
+      high: [
+        '水被风吹乱的时候，也在慢慢自己平。此刻，你愿意先放下哪一句话？',
+        '水遇到石头会绕开，不是输了。最近有没有一件事，你其实可以绕一绕？',
+        '水静下来的时候，底下的东西才浮上来。此刻浮上来的是什么？',
+        '水不拒绝任何一条支流。有没有一种情绪，你其实可以允许它待一会儿？',
+        '水不会一直浑。如果只允许你放下一件小事，你选哪一件？',
+        '水终会清。现在，你愿意把最后一点什么交给它？'
+      ]
+    },
+    bamboo: {
+      low: [
+        '竹影疏疏落落，正好留出光。此刻你心里最想留白的地方，是哪里？',
+        '竹子里是空的，所以能弯。你有没有哪一次，是弯一下就过去的？',
+        '疏，是给风留的路。你愿意给什么留一点位置？',
+        '一根竹子也能成林。有没有一件事，是你一个人也做得成的？',
+        '风小了，竹子慢慢直回去。此刻你的呼吸，有变化吗？',
+        '竹林安静下来。你想在这里留下一点什么？'
+      ],
+      mid: [
+        '竹子一节一节长，不着急。你今天最想慢下来的那一件事是什么？',
+        '竹子不争高低，只是一直往上。你最近在坚持的一件小事是什么？',
+        '竹影落在纸上，比竹子本身更轻。你愿意把哪件事看轻一点？',
+        '竹节是竹子停过的地方。你最近在哪里停过？',
+        '竹影在动，竹根不动。什么在动，什么不动？',
+        '回头看这一路竹影，你最想记住哪一片？'
+      ],
+      high: [
+        '风过竹叶，响一阵就停。你心里那阵响，现在还在吗？',
+        '竹叶落了，竹子还在。有什么是你失去之后才看清的？',
+        '竹子被风压得很低，也没有断。你身上最硬的那一处，是什么？',
+        '竹子空心，才装得下风声。你愿意让什么进来？',
+        '竹子不会一夜长成。如果只允许你给自己一点时间，你想给哪件事？',
+        '风还会来，竹子还会弯。现在，你愿意把什么轻轻放下？'
+      ]
+    },
+    pavilion: {
+      low: [
+        '亭子空着，风才有地方坐。此刻，你想让什么先出去？',
+        '空，不是没有，是留出来的。你愿意留一点时间给什么？',
+        '坐在亭里，风景自己会来。你此刻看见了什么？',
+        '亭子不留下谁，也不赶走谁。你愿意让哪件事就这样待着？',
+        '风停了，亭子更空了。此刻你心里还有多少声音？',
+        '这一趟风就要过去了。你想带走什么？'
+      ],
+      mid: [
+        '四面都是风，你可以随便挑一个方向看。现在你想看哪边？',
+        '亭子的柱子撑着屋顶，也不说话。谁在背后撑着你？',
+        '不必走到哪，亭子本身就是去处。你最近有没有停下来过？',
+        '风吹进来又出去，亭子还是亭子。你有没有变化？',
+        '坐下来之后，腿会慢慢放松。你身上哪里还紧着？',
+        '回头看看这座空亭，它一直在。你想对自己说什么？'
+      ],
+      high: [
+        '亭中无人，也没人催你说话。你现在最不想面对的是什么？',
+        '风穿过空亭的时候会响。你心里那点声音，想被听见吗？',
+        '亭子四面无墙，什么都能进来。你最怕进来的是什么？',
+        '空亭等的是过路人。你愿意等一等自己吗？',
+        '亭子空了，才能装下新的风。如果只允许你放下一件，你选哪件？',
+        '风还会来，你也会再来。现在，愿意把最后一点什么留下吗？'
+      ]
+    }
+  };
+
+  var CHIPS = [
+    ['嗯，我在。', '让我想一想。', '有点不知道从哪儿说起。'],
+    ['好像有一点。', '说出来轻了一点。', '还不太确定。'],
+    ['我其实一直在意这件事。', '想先安静一会儿。', '嗯，被你说中了。'],
+    ['我想起了一件小事。', '这样待着挺好。', '我还需要一点时间。'],
+    ['好像没那么紧了。', '我想把它放下一点。', '嗯，我听见了。'],
+    ['谢谢你陪我到这里。', '我想把它留在纸上。', '就到这里，刚刚好。']
+  ];
+
+  var NEXT_LABELS = {
+    1: '开始',
+    2: '继续',
+    3: '进入墨语',
+    4: '六轮之后，继续',
+    5: '定格这一笔',
+    6: '提交，再看见一次',
+    7: '继续'
+  };
+
+  var HINTS = {
+    1: '读完之后勾选，就可以开始。',
+    2: '三道题都碰一下，才算答过。',
+    3: '选一处此刻想待着的地方。',
+    4: '六轮走完，就能继续。',
+    6: '五道题都碰一下，就能提交。'
+  };
+
+  /* ---------------- 工具 ---------------- */
+  function nowIso() { return new Date().toISOString(); }
+  function nowMs() { return Date.now(); }
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function clampNum(v, lo, hi) {
+    var n = Number(v);
+    if (!isFinite(n)) return lo;
+    return Math.min(hi, Math.max(lo, Math.round(n)));
+  }
+  function blank(v) { return v == null || v === '' ? '' : v; }
+
+  /* ---------------- participant_id ---------------- */
+  /* 规则沿用原站：GDUF-YYMMDD-<组别><字母><三位数字> */
+  function makeParticipantId(group) {
+    var d = new Date();
+    var ymd = String(d.getFullYear()).slice(-2) + pad(d.getMonth() + 1) + pad(d.getDate());
+    var g = group === 'A' || group === 'B' ? group : (Math.random() < 0.5 ? 'A' : 'B');
+    var letter = String.fromCharCode(97 + Math.floor(Math.random() * 26));
+    var digits = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+    return 'GDUF-' + ymd + '-' + g + letter + digits;
+  }
+
+  /* ---------------- 状态 ---------------- */
+  function emptyScale(keys) {
+    var o = {};
+    keys.forEach(function (k) { o[k] = null; });
+    return o;
+  }
+  function emptyTouched(keys) {
+    var o = {};
+    keys.forEach(function (k) { o[k] = false; });
+    return o;
+  }
+  var PRE_KEYS = ['stress', 'fatigue', 'scatter'];
+  var UX_KEYS = ['accompany', 'ease'];
+
+  function newState() {
+    var t = nowMs();
+    var condition = Math.random() < 0.5 ? 'A' : 'B';
+    return {
+      version: VERSION,
+      participantId: makeParticipantId(condition),
+      conditionCode: condition,
+      startedAt: nowIso(),
+      finishedAt: '',
+      step: 1,
+      maxStep: 1,
+      consent: false,
+      pre: emptyScale(PRE_KEYS),
+      preTouched: emptyTouched(PRE_KEYS),
+      realm: null,
+      chat: [],
+      rounds: [],
+      roundStartAt: t,
+      chatStarted: false,
+      post: emptyScale(PRE_KEYS),
+      postTouched: emptyTouched(PRE_KEYS),
+      ux: emptyScale(UX_KEYS),
+      uxTouched: emptyTouched(UX_KEYS),
+      stepEnterAt: t,
+      stepDurations: {},
+      ink: { tone: 'medium', strokes: 0, snapshot: '' },
+      feedback: '',
+      postSubmitted: false,
+      lockedBack: false,
+      finished: false,
+      savedAt: '',
+      chatTranscript: []
+    };
+  }
+
+  var state = newState();
+  var els = {};
+  var hintTimer = 0;
+  var toastTimer = 0;
+  var boards = null;
+  var selectedChip = '';
+
+  /* ---------------- 读取分档 / 脚本 ---------------- */
+  function bucketFor(preSum) {
+    if (preSum == null || preSum === '') return 'mid';
+    if (preSum <= 9) return 'low';
+    if (preSum <= 14) return 'mid';
+    return 'high';
+  }
+  function preSum() {
+    var s = state.pre.stress, f = state.pre.fatigue, c = state.pre.scatter;
+    if (s == null || f == null || c == null) return null;
+    return s + f + c;
+  }
+  function postSum() {
+    var s = state.post.stress, f = state.post.fatigue, c = state.post.scatter;
+    if (s == null || f == null || c == null) return null;
+    return s + f + c;
+  }
+  function pickGuidance(roundIndex, realmKey, sum) {
+    var bank = GUIDE[realmKey] || GUIDE.mountains;
+    var tier = bucketFor(sum);
+    var list = bank[tier] || bank.mid;
+    return list[roundIndex] || list[list.length - 1];
+  }
+  function feedbackFor(deltaSum) {
+    if (deltaSum == null) return '这一程走到这里，已经够了。愿意停下来陪自己一会儿，本身就是一件事。';
+    if (deltaSum <= -4) return '这一次，你比刚才轻了一些。墨迹会干，纸还在，你可以随时回来。';
+    if (deltaSum <= -1) return '有一点变化，也许很轻。能在这里坐一会儿，本身就已经算数。';
+    if (deltaSum === 0) return '数字几乎没有动，也没关系。愿意停下来陪自己一会儿，已经是一件不容易的事。';
+    return '此刻也许比刚才沉一点。不用急着让它变好，先允许它在这里待一会儿。';
+  }
+  function deltaWord(v) {
+    if (v == null || !isFinite(v)) return '—';
+    if (v < 0) return '松了 ' + Math.abs(v) + ' 分';
+    if (v > 0) return '紧了 ' + v + ' 分';
+    return '没有变化';
+  }
+
+  /* ---------------- DOM 缓存 ---------------- */
+  function $(id) { return document.getElementById(id); }
+
+  function cacheEls() {
+    els.stepName = $('step-name');
+    els.stepCount = $('step-count');
+    els.progressFill = $('progress-fill');
+    els.panels = STEP_IDS.map(function (id) { return $(id); });
+    els.consent = $('consent-check');
+    els.backBtn = $('back-btn');
+    els.nextBtn = $('next-btn');
+    els.navHint = $('nav-hint');
+    els.navBar = $('nav-bar');
+    els.realmGrid = $('realm-grid');
+    els.realmNote = $('realm-note');
+    els.realmSeal = $('realm-seal');
+    els.roundLabel = $('round-label');
+    els.chatStream = $('chat-stream');
+    els.chips = $('chips');
+    els.replyInput = $('reply-input');
+    els.replyBtn = $('reply-btn');
+    els.skipBtn = $('skip-btn');
+    els.roundDone = $('round-done');
+    els.inkFrame = $('ink-frame');
+    els.inkCanvas = $('ink-canvas');
+    els.inkBloom = $('ink-bloom');
+    els.inkHint = $('ink-hint');
+    els.toneGroup = $('tone-group');
+    els.clearInk = $('clear-ink');
+    els.resultBars = $('result-bars');
+    els.resultFeedback = $('result-feedback');
+    els.resultMeta = $('result-meta');
+    els.inkPreview = $('ink-preview');
+    els.finishMeta = $('finish-meta');
+    els.export8 = $('export-8');
+    els.restartBtn = $('restart-btn');
+    els.toast = $('toast');
+    els.scales = {};
+    PRE_KEYS.forEach(function (k) {
+      els.scales['pre-' + k] = $('pre-' + k);
+      els.scales['pre-' + k + '-value'] = $('pre-' + k + '-value');
+      els.scales['post-' + k] = $('post-' + k);
+      els.scales['post-' + k + '-value'] = $('post-' + k + '-value');
+    });
+    UX_KEYS.forEach(function (k) {
+      els.scales['ux-' + k] = $('ux-' + k);
+      els.scales['ux-' + k + '-value'] = $('ux-' + k + '-value');
+    });
+  }
+
+  /* ---------------- 校验 / 进度 ---------------- */
+  function allAnswered(group, keys) {
+    var values = state[group] || {};
+    var touched = state[group + 'Touched'] || {};
+    return keys.every(function (k) {
+      return touched[k] === true && values[k] != null;
+    });
+  }
+  function validationFor(step) {
+    switch (step) {
+      case 1: return state.consent ? '' : HINTS[1];
+      case 2: return allAnswered('pre', PRE_KEYS) ? '' : HINTS[2];
+      case 3: return state.realm ? '' : HINTS[3];
+      case 4: return state.rounds.length >= 6 ? '' : HINTS[4];
+      case 5: return '';
+      case 6: return (allAnswered('post', PRE_KEYS) && allAnswered('ux', UX_KEYS)) ? '' : HINTS[6];
+      default: return '';
+    }
+  }
+  function canAdvance(step) { return !validationFor(step == null ? state.step : step); }
+
+  function updateChrome() {
+    if (!els.stepName) return;
+    els.stepName.textContent = STEP_NAMES[state.step - 1] || '';
+    els.stepCount.textContent = '第 ' + state.step + ' 步，共 ' + STEP_TOTAL + ' 步';
+    els.progressFill.style.width = (state.step / STEP_TOTAL * 100) + '%';
+    els.backBtn.hidden = state.step <= 1 || state.lockedBack;
+    els.navBar.hidden = state.step >= 8;
+    els.nextBtn.hidden = state.step >= 8;
+    if (state.step < 8) {
+      els.nextBtn.textContent = NEXT_LABELS[state.step] || '继续';
+      var problem = validationFor(state.step);
+      els.nextBtn.disabled = !!problem;
+      if (!els.navHint.classList.contains('is-warn')) {
+        els.navHint.textContent = problem || '';
+      }
+    }
+  }
+  function flashHint(msg) {
+    if (!els.navHint) return;
+    els.navHint.textContent = msg;
+    els.navHint.classList.add('is-warn');
+    if (hintTimer) clearTimeout(hintTimer);
+    hintTimer = setTimeout(function () {
+      els.navHint.classList.remove('is-warn');
+      updateChrome();
+    }, 2400);
+  }
+  function toast(msg) {
+    if (!els.toast) return;
+    els.toast.textContent = msg;
+    els.toast.classList.add('is-on');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
+      els.toast.classList.remove('is-on');
+    }, 2600);
+  }
+
+  /* ---------------- 时长记录 ---------------- */
+  function recordStepDwell() {
+    if (!state.stepEnterAt) return;
+    var ms = nowMs() - state.stepEnterAt;
+    if (ms >= 0) state.stepDurations['step_' + state.step] = Math.round(ms / 100) / 10;
+  }
+  function stepSeconds(n) {
+    var v = state.stepDurations['step_' + n];
+    return v == null ? '' : v;
+  }
+  function roundSeconds(r) {
+    return r && r.seconds != null ? r.seconds : '';
+  }
+
+  /* ---------------- 写本地 ---------------- */
+  function snapshotForStorage() {
+    var copy = {};
+    for (var k in state) {
+      if (Object.prototype.hasOwnProperty.call(state, k)) copy[k] = state[k];
+    }
+    copy.ink = {
+      tone: state.ink.tone,
+      strokes: state.ink.strokes,
+      hasSnapshot: !!state.ink.snapshot
+    };
+    return copy;
+  }
+  function persist() {
+    state.savedAt = nowIso();
+    try {
+      if (typeof localStorage !== 'undefined' && localStorage && localStorage.setItem) {
+        localStorage.setItem(STORE_KEY, JSON.stringify(snapshotForStorage()));
+      }
+    } catch (e) { /* 隐私模式等情况下静默失败 */ }
+  }
+
+  /* ---------------- 步进 ---------------- */
+  function renderStep(n) {
+    state.step = n;
+    if (n > state.maxStep) state.maxStep = n;
+    if (els.panels) {
+      els.panels.forEach(function (el, i) {
+        if (!el) return;
+        if (i + 1 === n) el.classList.add('is-active');
+        else el.classList.remove('is-active');
+      });
+    }
+    updateChrome();
+    if (n === 4) enterChat();
+    if (n === 5) enterInk();
+    if (n === 6) syncPostInputs();
+    if (n === 7) renderResult();
+    if (n === 8) enterFinish();
+    try { window.scrollTo(0, 0); } catch (e) { /* ignore */ }
+  }
+  function goTo(target, opts) {
+    opts = opts || {};
+    var t = Number(target);
+    if (!(t >= 1 && t <= STEP_TOTAL)) return false;
+    if (!opts.force) {
+      if (t > state.step) {
+        if (t !== state.step + 1) return false;
+        if (!canAdvance(state.step)) return false;
+      } else if (t < state.step) {
+        if (state.lockedBack) return false;
+      }
+    }
+    if (t === state.step && !opts.force) return true;
+    recordStepDwell();
+    if (state.step === 5) saveInkSnapshot();
+    if (t > state.step && state.step === 6) {
+      state.postSubmitted = true;
+      state.lockedBack = true;
+    }
+    if (!state.feedback) {
+      var ps = postSum(), prs = preSum();
+      if (ps != null && prs != null) state.feedback = feedbackFor(ps - prs);
+    }
+    state.stepEnterAt = nowMs();
+    renderStep(t);
+    persist();
+    return true;
+  }
+  function attemptNext() {
+    var problem = validationFor(state.step);
+    if (problem) { flashHint(problem); return false; }
+    if (state.step >= STEP_TOTAL) return false;
+    return goTo(state.step + 1);
+  }
+  function attemptBack() {
+    if (state.lockedBack) {
+      toast('后测提交之后，这一段就留在原处了。');
+      return false;
+    }
+    if (state.step <= 1) return false;
+    return goTo(state.step - 1);
+  }
+
+  /* ---------------- 滑杆 ---------------- */
+  function scaleWordsFor(group) { return group === 'ux' ? SCALE_AGREE : SCALE_WORDS; }
+  function bindScale(group, key) {
+    var input = els.scales['' + group + '-' + key];
+    var valueEl = els.scales['' + group + '-' + key + '-value'];
+    if (!input || !valueEl) return;
+    input.addEventListener('input', function () {
+      var v = clampNum(input.value, 1, 7);
+      input.value = v;
+      state[group][key] = v;
+      state[group + 'Touched'][key] = true;
+      valueEl.textContent = v + ' · ' + (scaleWordsFor(group)[v] || '');
+      valueEl.classList.add('is-touched');
+      updateChrome();
+      persist();
+    });
+  }
+  function bindScales() {
+    PRE_KEYS.forEach(function (k) { bindScale('pre', k); });
+    PRE_KEYS.forEach(function (k) { bindScale('post', k); });
+    UX_KEYS.forEach(function (k) { bindScale('ux', k); });
+  }
+  function syncScaleUI(group, key) {
+    var valueEl = els.scales[group + '-' + key + '-value'];
+    var input = els.scales[group + '-' + key];
+    if (!valueEl || !input) return;
+    var v = state[group][key];
+    if (state[group + 'Touched'][key] && v != null) {
+      input.value = v;
+      valueEl.textContent = v + ' · ' + (scaleWordsFor(group)[v] || '');
+      valueEl.classList.add('is-touched');
+    } else {
+      input.value = 4;
+      valueEl.textContent = '尚未选择';
+      valueEl.classList.remove('is-touched');
+    }
+  }
+  function syncPostInputs() {
+    PRE_KEYS.forEach(function (k) { syncScaleUI('post', k); });
+    UX_KEYS.forEach(function (k) { syncScaleUI('ux', k); });
+    PRE_KEYS.forEach(function (k) { syncScaleUI('pre', k); });
+  }
+
+  /* ---------------- 墨境 ---------------- */
+  function realmButtons() {
+    if (!els.realmGrid || !els.realmGrid.querySelectorAll) return [];
+    try {
+      return Array.prototype.slice.call(els.realmGrid.querySelectorAll('[data-realm]'));
+    } catch (e) { return []; }
+  }
+  function syncRealmUI() {
+    realmButtons().forEach(function (btn) {
+      btn.setAttribute('aria-pressed', btn.getAttribute('data-realm') === state.realm ? 'true' : 'false');
+    });
+    if (!els.realmNote) return;
+    if (state.realm && REALMS[state.realm]) {
+      els.realmNote.textContent = '好，我们就待在「' + REALMS[state.realm].name + '」。' + REALMS[state.realm].line + '。';
+    } else {
+      els.realmNote.textContent = '';
+    }
+  }
+  function selectRealm(key) {
+    if (!REALMS[key]) return false;
+    var changed = state.realm !== key;
+    state.realm = key;
+    if (changed && state.chatStarted) {
+      state.chat = [];
+      state.rounds = [];
+      state.chatTranscript = [];
+      state.chatStarted = false;
+      selectedChip = '';
+      if (state.step === 4) enterChat();
+      toast('换了一处墨境，墨语从头开始。');
+    }
+    syncRealmUI();
+    persist();
+    updateChrome();
+    return true;
+  }
+
+  /* ---------------- 墨语 ---------------- */
+  function currentRoundIndex() { return Math.min(state.rounds.length, 5); }
+  function ensureGuide(idx) {
+    var exists = state.chat.some(function (m) { return m.role === 'guide' && m.round === idx; });
+    if (exists) return;
+    state.chat.push({ role: 'guide', round: idx, text: pickGuidance(idx, state.realm, preSum()) });
+  }
+  function renderChat() {
+    if (!els.chatStream) return;
+    els.chatStream.innerHTML = state.chat.map(function (m) {
+      if (m.role === 'user') {
+        return '<p class="msg user"><span class="who">你</span>' + esc(m.text) + '</p>';
+      }
+      return '<p class="msg guide"><span class="who">墨语</span>' + esc(m.text) + '</p>';
+    }).join('');
+    try { els.chatStream.scrollTop = els.chatStream.scrollHeight; } catch (e) { /* ignore */ }
+  }
+  function renderChips() {
+    if (!els.chips) return;
+    if (state.rounds.length >= 6) {
+      els.chips.innerHTML = '';
+      els.chips.hidden = true;
+      return;
+    }
+    var idx = currentRoundIndex();
+    var list = CHIPS[idx] || [];
+    els.chips.innerHTML = list.map(function (text, i) {
+      return '<button type="button" class="chip" data-chip-index="' + i + '" aria-pressed="false">' + esc(text) + '</button>';
+    }).join('');
+    els.chips.hidden = false;
+  }
+  function syncRoundLabel() {
+    if (!els.roundLabel) return;
+    if (state.rounds.length >= 6) {
+      els.roundLabel.textContent = '六轮 · 已完成';
+    } else {
+      els.roundLabel.textContent = '第 ' + (state.rounds.length + 1) + ' 轮 · 共 6 轮';
+    }
+  }
+  function setRoundControlsVisible(visible) {
+    if (els.replyBtn) els.replyBtn.hidden = !visible;
+    if (els.skipBtn) els.skipBtn.hidden = !visible;
+    if (els.replyInput) els.replyInput.hidden = !visible;
+    if (els.roundDone) els.roundDone.hidden = visible;
+    if (!visible) {
+      if (els.chips) { els.chips.innerHTML = ''; els.chips.hidden = true; }
+    }
+  }
+  function beginRound() {
+    var idx = state.rounds.length;
+    if (idx >= 6) { showRoundDone(); return; }
+    ensureGuide(idx);
+    state.roundStartAt = nowMs();
+    selectedChip = '';
+    if (els.replyInput) els.replyInput.value = '';
+    renderChat();
+    renderChips();
+    syncRoundLabel();
+    setRoundControlsVisible(true);
+    if (els.realmSeal && REALMS[state.realm]) els.realmSeal.textContent = REALMS[state.realm].name;
+  }
+  function showRoundDone() {
+    renderChat();
+    syncRoundLabel();
+    setRoundControlsVisible(false);
+    if (els.chips) { els.chips.innerHTML = ''; els.chips.hidden = true; }
+  }
+  function enterChat() {
+    if (!state.realm) return;
+    if (!state.chatStarted) {
+      state.chatStarted = true;
+      state.rounds = [];
+      state.chat = [];
+      state.chatTranscript = [];
+      beginRound();
+    } else if (state.rounds.length >= 6) {
+      showRoundDone();
+    } else {
+      ensureGuide(state.rounds.length);
+      renderChat();
+      renderChips();
+      syncRoundLabel();
+      setRoundControlsVisible(true);
+      if (els.realmSeal && REALMS[state.realm]) els.realmSeal.textContent = REALMS[state.realm].name;
+    }
+    updateChrome();
+  }
+  function recordRound(reply, skipped) {
+    if (!state.chatStarted) return false;
+    if (state.rounds.length >= 6) {
+      toast('六轮已经走完了，可以继续往前。');
+      return false;
+    }
+    var idx = state.rounds.length;
+    var guideText = pickGuidance(idx, state.realm, preSum());
+    var guideMsg = null;
+    for (var i = state.chat.length - 1; i >= 0; i--) {
+      if (state.chat[i].role === 'guide' && state.chat[i].round === idx) { guideMsg = state.chat[i]; break; }
+    }
+    if (guideMsg) guideText = guideMsg.text;
+    var seconds = 0;
+    if (state.roundStartAt) seconds = Math.max(0, Math.round((nowMs() - state.roundStartAt) / 100) / 10);
+    var entry = {
+      round: idx + 1,
+      guide: guideText,
+      reply: reply || '',
+      skipped: skipped ? 1 : 0,
+      seconds: seconds
+    };
+    state.rounds.push(entry);
+    state.chatTranscript.push(entry);
+    if (reply) state.chat.push({ role: 'user', round: idx, text: reply });
+    persist();
+    if (state.rounds.length >= 6) {
+      showRoundDone();
+      updateChrome();
+    } else {
+      beginRound();
+      updateChrome();
+    }
+    return true;
+  }
+  function submitReply() {
+    if (state.rounds.length >= 6) return false;
+    var typed = els.replyInput && els.replyInput.value ? els.replyInput.value.trim() : '';
+    var text = typed || selectedChip;
+    if (!text) {
+      flashHint('写一句，或选一句，再轻轻回应。也可以选择「就这样，继续」。');
+      return false;
+    }
+    return recordRound(text, false);
+  }
+  function skipRound() {
+    if (state.rounds.length >= 6) return false;
+    return recordRound('', true);
+  }
+
+  /* ---------------- 落墨 Canvas ---------------- */
+  var TONES = {
+    light: { alpha: 0.6, radius: 0.85 },
+    medium: { alpha: 1, radius: 1.05 },
+    dark: { alpha: 1.45, radius: 1.2 }
+  };
+  var TAU = Math.PI * 2;
+
+  function initBoard() {
+    if (boards || !els.inkCanvas || !els.inkBloom) return;
+    var ink = els.inkCanvas;
+    var bloom = els.inkBloom;
+    var inkCtx = ink.getContext && ink.getContext('2d');
+    var bloomCtx = bloom.getContext && bloom.getContext('2d');
+    if (!inkCtx || !bloomCtx) return;
+    boards = {
+      ink: ink, bloom: bloom, inkCtx: inkCtx, bloomCtx: bloomCtx,
+      cssW: 0, cssH: 0, dpr: 1, drawing: false, lastX: 0, lastY: 0,
+      blooms: [], raf: 0, tone: state.ink.tone || 'medium'
+    };
+    sizeBoard();
+    bindBoardPointer();
+    syncToneUI();
+    if (state.ink.strokes > 0 && els.inkHint) els.inkHint.classList.add('is-hidden');
+  }
+  function boardRect() {
+    var el = els.inkFrame || els.inkCanvas;
+    var r = el && el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+    var w = r && r.width ? r.width : 0;
+    var h = r && r.height ? r.height : 0;
+    if (!w) w = 320;
+    if (!h) h = Math.round(w * 1.25);
+    return { width: w, height: h };
+  }
+  function sizeBoard() {
+    if (!boards) return;
+    var rect = boardRect();
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var w = Math.max(160, Math.round(rect.width));
+    var h = Math.max(200, Math.round(rect.height));
+    var oldW = boards.cssW, oldH = boards.cssH;
+    var oldInk = null, oldBloom = null;
+    if (oldW && oldH && oldW !== w && boards.ink.width) {
+      try {
+        oldInk = document.createElement('canvas');
+        oldInk.width = boards.ink.width;
+        oldInk.height = boards.ink.height;
+        oldInk.getContext('2d').drawImage(boards.ink, 0, 0);
+        oldBloom = document.createElement('canvas');
+        oldBloom.width = boards.bloom.width;
+        oldBloom.height = boards.bloom.height;
+        oldBloom.getContext('2d').drawImage(boards.bloom, 0, 0);
+      } catch (e) { oldInk = null; oldBloom = null; }
+    }
+    boards.cssW = w; boards.cssH = h; boards.dpr = dpr;
+    boards.ink.width = Math.round(w * dpr);
+    boards.ink.height = Math.round(h * dpr);
+    boards.bloom.width = Math.round(w * dpr);
+    boards.bloom.height = Math.round(h * dpr);
+    boards.inkCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    boards.bloomCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (oldInk) {
+      try {
+        boards.inkCtx.save();
+        boards.inkCtx.scale(w / oldW, h / oldH);
+        boards.inkCtx.drawImage(oldInk, 0, 0, oldW, oldH);
+        boards.inkCtx.restore();
+      } catch (e) { /* ignore */ }
+    }
+  }
+  function pointerPos(e) {
+    var canvas = boards.ink;
+    var rect = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : { left: 0, top: 0, width: boards.cssW, height: boards.cssH };
+    var x = (e.clientX - rect.left);
+    var y = (e.clientY - rect.top);
+    if (rect.width && rect.width !== boards.cssW) x = x * (boards.cssW / rect.width);
+    if (rect.height && rect.height !== boards.cssH) y = y * (boards.cssH / rect.height);
+    return { x: x, y: y };
+  }
+  function toneParams() { return TONES[boards && boards.tone] || TONES.medium; }
+  function inkColor(alpha) {
+    return 'rgba(28, 26, 22, ' + alpha.toFixed(4) + ')';
+  }
+  function settleDab(x, y, scale) {
+    if (!boards) return;
+    var ctx = boards.inkCtx;
+    var p = toneParams();
+    var s = (scale || 1) * p.radius;
+    for (var i = 0; i < 9; i++) {
+      var ang = Math.random() * TAU;
+      var dist = Math.pow(Math.random(), 0.7) * 10 * s;
+      var rad = (2.4 + Math.random() * 7.5) * s;
+      ctx.beginPath();
+      ctx.globalAlpha = (0.016 + Math.random() * 0.03) * p.alpha;
+      ctx.fillStyle = inkColor(1);
+      ctx.arc(x + Math.cos(ang) * dist, y + Math.sin(ang) * dist, rad, 0, TAU);
+      ctx.fill();
+    }
+    ctx.beginPath();
+    ctx.globalAlpha = 0.05 * p.alpha;
+    ctx.fillStyle = inkColor(1);
+    ctx.arc(x, y, (2.6 + Math.random() * 2.6) * s, 0, TAU);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    state.ink.strokes += 1;
+  }
+  function spawnBloom(x, y) {
+    if (!boards) return;
+    var p = toneParams();
+    var base = (7 + Math.random() * 5) * p.radius;
+    var layers = [];
+    for (var i = 0; i < 10; i++) {
+      layers.push({
+        r: base * (0.5 + Math.random() * 1.9),
+        dx: (Math.random() - 0.5) * base * 1.8,
+        dy: (Math.random() - 0.5) * base * 1.8,
+        a: (0.018 + Math.random() * 0.05) * p.alpha,
+        ph: Math.random() * TAU,
+        sp: 0.8 + Math.random() * 1.6
+      });
+    }
+    boards.blooms.push({
+      x: x, y: y,
+      t0: (typeof performance !== 'undefined' && performance.now ? performance.now() : nowMs()),
+      life: 1100 + Math.random() * 700,
+      layers: layers
+    });
+    if (!boards.raf && typeof requestAnimationFrame === 'function') {
+      boards.raf = requestAnimationFrame(tickBloom);
+    }
+  }
+  function tickBloom(now) {
+    if (!boards) return;
+    var ctx = boards.bloomCtx;
+    var w = boards.cssW, h = boards.cssH;
+    ctx.clearRect(0, 0, w, h);
+    var alive = [];
+    for (var i = 0; i < boards.blooms.length; i++) {
+      var b = boards.blooms[i];
+      var t = (now - b.t0) / b.life;
+      if (t >= 1) continue;
+      if (t < 0) t = 0;
+      var ease = 1 - Math.pow(1 - t, 2.3);
+      var fade = Math.pow(1 - t, 1.5);
+      for (var j = 0; j < b.layers.length; j++) {
+        var L = b.layers[j];
+        var wob = Math.sin(t * 6 + L.ph) * 2.2 * (1 - t);
+        var r = L.r * (0.35 + ease * 2.0);
+        ctx.beginPath();
+        ctx.globalAlpha = Math.max(0, L.a * fade);
+        ctx.fillStyle = inkColor(1);
+        ctx.arc(b.x + L.dx * ease + wob, b.y + L.dy * ease - wob * 0.6, Math.max(0.4, r), 0, TAU);
+        ctx.fill();
+      }
+      alive.push(b);
+    }
+    ctx.globalAlpha = 1;
+    boards.blooms = alive;
+    if (alive.length > 0) {
+      boards.raf = requestAnimationFrame(tickBloom);
+    } else {
+      boards.raf = 0;
+      ctx.clearRect(0, 0, w, h);
+    }
+  }
+  function paintAt(x, y) {
+    settleDab(x, y, 0.9);
+    spawnBloom(x, y);
+    if (els.inkHint) els.inkHint.classList.add('is-hidden');
+  }
+  function bindBoardPointer() {
+    var canvas = boards.ink;
+    canvas.addEventListener('pointerdown', function (e) {
+      if (!boards) return;
+      try { if (e.cancelable) e.preventDefault(); } catch (err) { /* ignore */ }
+      boards.drawing = true;
+      var p = pointerPos(e);
+      boards.lastX = p.x; boards.lastY = p.y;
+      paintAt(p.x, p.y);
+      if (canvas.setPointerCapture) {
+        try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+      }
+    });
+    canvas.addEventListener('pointermove', function (e) {
+      if (!boards || !boards.drawing) return;
+      try { if (e.cancelable) e.preventDefault(); } catch (err) { /* ignore */ }
+      var p = pointerPos(e);
+      var dx = p.x - boards.lastX;
+      var dy = p.y - boards.lastY;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 1.2) return;
+      var steps = Math.min(14, Math.max(1, Math.ceil(dist / 5)));
+      for (var i = 1; i <= steps; i++) {
+        var t = i / steps;
+        settleDab(boards.lastX + dx * t, boards.lastY + dy * t, 1);
+      }
+      spawnBloom(p.x, p.y);
+      boards.lastX = p.x; boards.lastY = p.y;
+      if (els.inkHint) els.inkHint.classList.add('is-hidden');
+    });
+    function endStroke() {
+      if (!boards) return;
+      boards.drawing = false;
+      persist();
+    }
+    canvas.addEventListener('pointerup', endStroke);
+    canvas.addEventListener('pointercancel', endStroke);
+    canvas.addEventListener('pointerleave', function () { if (boards) boards.drawing = false; });
+  }
+  function syncToneUI() {
+    if (!els.toneGroup || !els.toneGroup.querySelectorAll) return;
+    var buttons;
+    try { buttons = els.toneGroup.querySelectorAll('[data-tone]'); } catch (e) { return; }
+    Array.prototype.forEach.call(buttons, function (btn) {
+      btn.setAttribute('aria-pressed', btn.getAttribute('data-tone') === (boards ? boards.tone : state.ink.tone) ? 'true' : 'false');
+    });
+  }
+  function setTone(tone) {
+    if (!TONES[tone]) return;
+    state.ink.tone = tone;
+    if (boards) boards.tone = tone;
+    syncToneUI();
+    persist();
+  }
+  function clearInk() {
+    if (!boards) initBoard();
+    if (!boards) return;
+    boards.inkCtx.clearRect(0, 0, boards.cssW, boards.cssH);
+    boards.bloomCtx.clearRect(0, 0, boards.cssW, boards.cssH);
+    boards.blooms = [];
+    state.ink.strokes = 0;
+    state.ink.snapshot = '';
+    if (els.inkHint) els.inkHint.classList.remove('is-hidden');
+    persist();
+    toast('纸已重新铺好。');
+  }
+  function saveInkSnapshot() {
+    if (!boards || !els.inkCanvas) return;
+    if (state.ink.strokes <= 0) { state.ink.snapshot = ''; return; }
+    try {
+      var data = els.inkCanvas.toDataURL('image/png');
+      if (data && data.indexOf('data:image') === 0) state.ink.snapshot = data;
+    } catch (e) { /* ignore */ }
+  }
+  function enterInk() {
+    initBoard();
+    if (!boards) return;
+    if (boards.cssW < 2) sizeBoard();
+    syncToneUI();
+  }
+
+  /* ---------------- 结果 ---------------- */
+  function computeDeltas() {
+    var d = {};
+    PRE_KEYS.forEach(function (k) {
+      if (state.pre[k] != null && state.post[k] != null) d[k] = state.post[k] - state.pre[k];
+      else d[k] = null;
+    });
+    var ps = preSum(), qs = postSum();
+    d.sum = ps != null && qs != null ? qs - ps : null;
+    return d;
+  }
+  function resultMetaText() {
+    var parts = [];
+    if (state.realm && REALMS[state.realm]) parts.push('墨境 · ' + REALMS[state.realm].name);
+    parts.push('墨语 · ' + Math.min(state.rounds.length, 6) + ' / 6 轮');
+    var uxAccompany = state.ux.accompany;
+    var uxEase = state.ux.ease;
+    if (uxAccompany != null) parts.push('被陪着 · ' + uxAccompany + ' 分');
+    if (uxEase != null) parts.push('松一松 · ' + uxEase + ' 分');
+    var dur = 0;
+    try {
+      var end = state.finishedAt ? new Date(state.finishedAt).getTime() : nowMs();
+      dur = Math.max(0, Math.round((end - new Date(state.startedAt).getTime()) / 60000));
+    } catch (e) { dur = 0; }
+    if (dur > 0) parts.push('约 ' + dur + ' 分钟');
+    return parts.join(' ／ ');
+  }
+  function renderResult() {
+    if (!els.resultBars) return;
+    var dims = [
+      { key: 'stress', label: '紧绷' },
+      { key: 'fatigue', label: '疲惫' },
+      { key: 'scatter', label: '纷乱' }
+    ];
+    var bars = '';
+    dims.forEach(function (dim) {
+      var preV = state.pre[dim.key] == null ? 0 : state.pre[dim.key];
+      var postV = state.post[dim.key] == null ? 0 : state.post[dim.key];
+      var delta = state.post[dim.key] == null || state.pre[dim.key] == null ? null : postV - preV;
+      bars += '<div class="bar-row">' +
+        '<div class="bar-name">' + dim.label + '</div>' +
+        '<div class="bar-stack">' +
+          '<div class="bar-line"><span class="bar-fill pre" data-w="' + (preV / 7 * 100) + '"></span></div>' +
+          '<div class="bar-line"><span class="bar-fill post" data-w="' + (postV / 7 * 100) + '"></span></div>' +
+          '<div class="bar-vals"><span>刚才 <b>' + (state.pre[dim.key] == null ? '—' : preV) + '</b></span><span>现在 <b>' + (state.post[dim.key] == null ? '—' : postV) + '</b></span></div>' +
+        '</div>' +
+        '<div class="bar-delta' + (delta != null && delta < 0 ? ' is-down' : '') + '">' + deltaWord(delta) + '</div>' +
+      '</div>';
+    });
+    els.resultBars.innerHTML = bars;
+    var ps = preSum(), qs = postSum();
+    if (!state.feedback) state.feedback = feedbackFor(ps != null && qs != null ? qs - ps : null);
+    if (els.resultFeedback) els.resultFeedback.textContent = state.feedback;
+    if (els.resultMeta) els.resultMeta.textContent = resultMetaText();
+    if (els.inkPreview) {
+      if (state.ink.snapshot && state.ink.strokes > 0) {
+        els.inkPreview.innerHTML = '<figure class="preview-figure"><img src="' + state.ink.snapshot + '" alt="你在落墨这一步留下的墨迹" /><figcaption>你落下的墨迹</figcaption></figure>';
+      } else {
+        els.inkPreview.innerHTML = '<p class="preview-empty">这一程，你没有落墨。也没有关系，来这里坐下，本身就已经够了。</p>';
+      }
+    }
+    try {
+      var fills = els.resultBars.querySelectorAll('.bar-fill');
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          Array.prototype.forEach.call(fills, function (f) {
+            var w = f.getAttribute('data-w');
+            if (w != null) f.style.width = w + '%';
+          });
+        });
+      });
+    } catch (e) { /* ignore */ }
+  }
+
+  /* ---------------- 结束 ---------------- */
+  function formatDate(iso) {
+    if (!iso) return '—';
+    try {
+      var d = new Date(iso);
+      return d.getFullYear() + ' 年 ' + (d.getMonth() + 1) + ' 月 ' + d.getDate() + ' 日 ' +
+        pad(d.getHours()) + ':' + pad(d.getMinutes());
+    } catch (e) { return '—'; }
+  }
+  function enterFinish() {
+    if (!state.finishedAt) state.finishedAt = nowIso();
+    state.finished = true;
+    persist();
+    if (els.finishMeta) {
+      var rows = [
+        ['参与者编号', state.participantId],
+        ['墨境', state.realm && REALMS[state.realm] ? REALMS[state.realm].name : '未选择'],
+        ['墨语', Math.min(state.rounds.length, 6) + ' / 6 轮'],
+        ['开始时间', formatDate(state.startedAt)],
+        ['结束时间', formatDate(state.finishedAt)],
+        ['本机保存', state.savedAt ? '已保存 · ' + formatDate(state.savedAt) : '已保存']
+      ];
+      els.finishMeta.innerHTML = rows.map(function (r) {
+        return '<dt>' + esc(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd>';
+      }).join('');
+    }
+  }
+
+  /* ---------------- CSV 导出 ---------------- */
+  function buildCsvRows() {
+    var pre = state.pre;
+    var post = state.post;
+    var ux = state.ux;
+    var ps = preSum();
+    var qs = postSum();
+    var endIso = state.finishedAt || nowIso();
+    var duration = 0;
+    try {
+      duration = Math.max(0, Math.round((new Date(endIso).getTime() - new Date(state.startedAt).getTime()) / 1000));
+    } catch (e) { duration = 0; }
+    var rows = [['变量', '数值']];
+    function add(k, v) { rows.push([k, blank(v)]); }
+    add('participant_id', state.participantId);
+    add('condition_code', state.conditionCode + '-' + (state.realm ? REALMS[state.realm].code : 'na'));
+    add('started_at', state.startedAt);
+    add('finished_at', endIso);
+    add('duration_seconds', duration);
+    add('consent', state.consent ? 1 : 0);
+    add('pre_stress', pre.stress);
+    add('pre_fatigue', pre.fatigue);
+    add('pre_scatter', pre.scatter);
+    add('pre_sum', ps == null ? '' : ps);
+    add('ink_realm', state.realm || '');
+    add('ink_realm_name', state.realm && REALMS[state.realm] ? REALMS[state.realm].name : '');
+    add('chat_rounds', Math.min(state.rounds.length, 6));
+    for (var r = 1; r <= 6; r++) {
+      var entry = state.rounds[r - 1];
+      add('round_' + r + '_seconds', entry ? roundSeconds(entry) : '');
+      add('round_' + r + '_reply', entry ? entry.reply : '');
+      add('round_' + r + '_skipped', entry ? entry.skipped : '');
+    }
+    add('post_stress', post.stress);
+    add('post_fatigue', post.fatigue);
+    add('post_scatter', post.scatter);
+    add('post_sum', qs == null ? '' : qs);
+    add('post_ux_accompany', ux.accompany);
+    add('post_ux_ease', ux.ease);
+    PRE_KEYS.forEach(function (k) {
+      var d = pre[k] == null || post[k] == null ? '' : post[k] - pre[k];
+      add('delta_' + k, d);
+    });
+    add('delta_sum', ps == null || qs == null ? '' : qs - ps);
+    for (var s = 1; s <= STEP_TOTAL; s++) {
+      add('step_' + s + '_seconds', stepSeconds(s));
+    }
+    add('ink_strokes', state.ink.strokes);
+    add('ink_has_snapshot', state.ink.snapshot ? 1 : 0);
+    add('feedback', state.feedback);
+    add('study_note', '非医疗建议；数据仅存本机');
+    add('chat_transcript', JSON.stringify(state.rounds));
+    return rows;
+  }
+  function csvCell(v) {
+    return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+  }
+  function buildCsv() {
+    var rows = buildCsvRows();
+    return '\uFEFF' + rows.map(function (row) {
+      return row.map(csvCell).join(',');
+    }).join('\r\n');
+  }
+  function exportCsv() {
+    var csvText = buildCsv();
+    var filename = (state.participantId || 'participant') + '_墨间记录.csv';
+    try {
+      var blob = new Blob([csvText], { type: 'text/csv;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      if (typeof setTimeout === 'function') {
+        setTimeout(function () {
+          try { URL.revokeObjectURL(url); } catch (e) { /* ignore */ }
+          if (a.parentNode) a.parentNode.removeChild(a);
+        }, 900);
+      }
+      toast('记录已导出：' + filename);
+    } catch (e) {
+      toast('导出没有成功，请换一个浏览器再试。');
+    }
+    return csvText;
+  }
+
+  /* ---------------- 重置 ---------------- */
+  function resetAll() {
+    try {
+      if (typeof localStorage !== 'undefined' && localStorage && localStorage.removeItem) {
+        localStorage.removeItem(STORE_KEY);
+      }
+    } catch (e) { /* ignore */ }
+    if (boards && boards.inkCtx && boards.bloomCtx) {
+      try {
+        boards.inkCtx.clearRect(0, 0, boards.cssW, boards.cssH);
+        boards.bloomCtx.clearRect(0, 0, boards.cssW, boards.cssH);
+      } catch (e) { /* ignore */ }
+    }
+    state = newState();
+    selectedChip = '';
+    boards = null;
+    if (els.consent) els.consent.checked = false;
+    PRE_KEYS.forEach(function (k) {
+      if (els.scales['pre-' + k]) els.scales['pre-' + k].value = 4;
+      if (els.scales['post-' + k]) els.scales['post-' + k].value = 4;
+      syncScaleUI('pre', k);
+      syncScaleUI('post', k);
+    });
+    UX_KEYS.forEach(function (k) {
+      if (els.scales['ux-' + k]) els.scales['ux-' + k].value = 4;
+      syncScaleUI('ux', k);
+    });
+    if (els.replyInput) els.replyInput.value = '';
+    if (els.chatStream) els.chatStream.innerHTML = '';
+    if (els.chips) els.chips.innerHTML = '';
+    if (els.resultBars) els.resultBars.innerHTML = '';
+    if (els.resultFeedback) els.resultFeedback.textContent = '';
+    if (els.resultMeta) els.resultMeta.textContent = '';
+    if (els.inkPreview) els.inkPreview.innerHTML = '';
+    if (els.inkHint) els.inkHint.classList.remove('is-hidden');
+    syncRealmUI();
+    syncToneUI();
+    goTo(1, { force: true });
+    updateChrome();
+    persist();
+    toast('已经重新铺好纸。');
+  }
+
+  /* ---------------- 绑定 ---------------- */
+  function bindStatic() {
+    if (els.consent) {
+      els.consent.addEventListener('change', function () {
+        state.consent = !!els.consent.checked;
+        updateChrome();
+        persist();
+      });
+    }
+    if (els.nextBtn) els.nextBtn.addEventListener('click', attemptNext);
+    if (els.backBtn) els.backBtn.addEventListener('click', attemptBack);
+    if (els.realmGrid) {
+      els.realmGrid.addEventListener('click', function (e) {
+        var t = e.target;
+        while (t && t !== els.realmGrid && !(t.getAttribute && t.getAttribute('data-realm'))) t = t.parentNode;
+        if (t && t !== els.realmGrid && t.getAttribute) {
+          selectRealm(t.getAttribute('data-realm'));
+        }
+      });
+    }
+    if (els.chips) {
+      els.chips.addEventListener('click', function (e) {
+        var t = e.target;
+        while (t && t !== els.chips && !(t.getAttribute && t.getAttribute('data-chip-index') != null)) t = t.parentNode;
+        if (!t || t === els.chips || !t.getAttribute) return;
+        var idx = Number(t.getAttribute('data-chip-index'));
+        var chips = els.chips.querySelectorAll('.chip');
+        Array.prototype.forEach.call(chips, function (c) { c.setAttribute('aria-pressed', 'false'); });
+        t.setAttribute('aria-pressed', 'true');
+        selectedChip = (CHIPS[currentRoundIndex()] || [])[idx] || '';
+      });
+    }
+    if (els.replyBtn) els.replyBtn.addEventListener('click', submitReply);
+    if (els.skipBtn) els.skipBtn.addEventListener('click', skipRound);
+    if (els.toneGroup) {
+      els.toneGroup.addEventListener('click', function (e) {
+        var t = e.target;
+        while (t && t !== els.toneGroup && !(t.getAttribute && t.getAttribute('data-tone'))) t = t.parentNode;
+        if (t && t !== els.toneGroup && t.getAttribute) setTone(t.getAttribute('data-tone'));
+      });
+    }
+    if (els.clearInk) els.clearInk.addEventListener('click', clearInk);
+    if (els.export8) els.export8.addEventListener('click', exportCsv);
+    if (els.restartBtn) els.restartBtn.addEventListener('click', function () {
+      if (typeof window.confirm === 'function') {
+        if (!window.confirm('重新开始会清空这台设备上的记录，确定吗？')) return;
+      }
+      resetAll();
+    });
+    if (typeof window.addEventListener === 'function') {
+      window.addEventListener('resize', function () {
+        if (boards) sizeBoard();
+      });
+    }
+  }
+
+  function bindAll() {
+    bindStatic();
+    bindScales();
+  }
+
+  /* ---------------- 对外 API（供冒烟测试与调试） ---------------- */
+  function exposeApi() {
+    var api = {
+      version: VERSION,
+      STEP_IDS: STEP_IDS.slice(),
+      REALMS: REALMS,
+      GUIDE: GUIDE,
+      goTo: goTo,
+      attemptNext: attemptNext,
+      attemptBack: attemptBack,
+      canAdvance: canAdvance,
+      validation: function () { return validationFor(state.step); },
+      selectRealm: selectRealm,
+      recordRound: recordRound,
+      submitReply: submitReply,
+      skipRound: skipRound,
+      buildCsv: buildCsv,
+      buildCsvRows: buildCsvRows,
+      exportCsv: exportCsv,
+      makeParticipantId: makeParticipantId,
+      pickGuidance: pickGuidance,
+      bucketFor: bucketFor,
+      feedbackFor: feedbackFor,
+      computeDeltas: computeDeltas,
+      preSum: preSum,
+      postSum: postSum,
+      reset: resetAll,
+      saveInkSnapshot: saveInkSnapshot,
+      clearInk: clearInk,
+      _els: els
+    };
+    Object.defineProperty(api, 'state', { get: function () { return state; }, enumerable: true });
+    window.MOJIAN = api;
+    // 无头浏览器可据此等待初始化完成
+    try { document.documentElement.setAttribute('data-mojian-ready', '1'); } catch (e) { /* ignore */ }
+  }
+
+  /* ---------------- 启动 ---------------- */
+  function boot() {
+    cacheEls();
+    bindAll();
+    state.startedAt = nowIso();
+    state.stepEnterAt = nowMs();
+    state.roundStartAt = nowMs();
+    renderStep(1);
+    syncRealmUI();
+    syncToneUI();
+    updateChrome();
+    persist();
+  }
+
+  exposeApi();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();
+</script>
+</body>
+</html>
