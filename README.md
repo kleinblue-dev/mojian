@@ -6,11 +6,14 @@
 
 ## 线上地址
 
-部署在 GitHub Pages（源仓库为 private）：
+由 Cloudflare Pages 发布 `gh-pages` 分支（源仓库为 private）：
 
 ```
-https://kleinblue-dev.github.io/mojian/
+https://mojian.pages.dev
 ```
+
+> 说明：GitHub 免费账号不支持私有仓库开 Pages，故走 Cloudflare Pages（免费、支持私有仓库）。
+> 配置步骤见 [DEPLOY.md](DEPLOY.md)。
 
 ## 仓库结构
 
