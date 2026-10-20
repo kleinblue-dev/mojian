@@ -11,15 +11,18 @@ Cloudflare Pages 免费版**支持私有仓库**，且只读取 `gh-pages` 分�
 
    | 字段 | 值 |
    |---|---|
-   | Project name | `mojian` |
+   | Project name | `mojian-ink` |
    | Production branch | **`gh-pages`** ← 关键，别用 main |
    | Framework preset | `None` |
    | Build command | 留空 |
    | Build output directory | `/`（若提示目录无效，改成 `.`） |
 
 4. 点 **Save and Deploy**，等约 30 秒
-5. 得到地址：`https://mojian.pages.dev`
+5. 得到地址：`https://mojian-ink.pages.dev`
 6. 之后每次更新：本地跑 `./publish.ps1` 推送 `gh-pages`，Cloudflare 自动重新发布
+
+> ⚠️ **pages.dev 子域名全局唯一、先到先得。** `mojian.pages.dev` 已被他人占用（打开是一个无关的 Vite 默认模板页），所以项目名必须用 `mojian-ink`。
+> 想确认某个名字是否可用：`Resolve-DnsName <name>.pages.dev` 报 "DNS name does not exist" 即未占用。
 
 ## 为什么要单独一个 gh-pages 分支
 

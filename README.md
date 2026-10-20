@@ -9,7 +9,7 @@
 由 Cloudflare Pages 发布 `gh-pages` 分支（源仓库为 private）：
 
 ```
-https://mojian.pages.dev
+https://mojian-ink.pages.dev
 ```
 
 > 说明：GitHub 免费账号不支持私有仓库开 Pages，故走 Cloudflare Pages（免费、支持私有仓库）。
