@@ -21,7 +21,7 @@ https://kleinblue-dev.github.io/mojian/
 ```
 index.html      ← 单文件应用（内联全部 CSS/JS，零依赖、零网络请求）
 robots.txt      ← 禁止搜索引擎抓取
-docs/           ← 分析文档（仅在 private 仓库可见，不会发布到 Pages）
+docs/           ← 分析文档（仅在仓库中可见，不会发布到 Pages）
 publish.ps1     ← 把 index.html 发布到 gh-pages 分支
 ```
 
